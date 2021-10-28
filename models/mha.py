@@ -165,7 +165,7 @@ class MHA(nn.Module):
           q, k, v: (torch.Tensor of float32)[batch_size, seq_len, n_heads, d_head] The query, key 
             and value tensors. The kernel function must be already applied to q and k. The
             attention mask must be already applied to k.
-          weights: (tuple of (torch.Tensor of float32)[batch_size, seq_len, n_heads, d_head])
+          weights: (tuple of (torch.Tensor of float32)[batch_size, seq_len])
             weights = (cos, sin), where cos[i, j] = cos(pi * i / 2 / M[i]) whre M[i] is the length
             of the i-th sample in the batch. Similarly for sin.
 
@@ -226,7 +226,7 @@ class MHA(nn.Module):
         q, k, v = torch.chunk(self.w_qkv(x), 3, -1)
         # q, k, v -> [batch_size, seq_len, d_model]
 
-        # A note about padding & masking in kernel attention:
+        # A note about padding & masking in linear kernel attention:
         # In the f(Q) * (f(K^T) * V) attention, f(Q) is mutiplied by a dxd matrix.
         # Therefore padded elements must be removed from (f(K^T) * V).
         # This can be done by replacing padded elements (in the seq_len) dimension

@@ -8,7 +8,7 @@ class Baseline_transformer(nn.Module):
     """A makeshift O(n^2 * d) BERT-style transformer used as a baseline. 
 
     Attributes
-      for_clf: (bool) If True, the model is used for classification. Otherwise, is
+      for_clf: (bool) If True, the model is used for classification. Otherwise, it
         is used for BERT pretraining.
       n_classes: (int) Number of classes of the classification problem. Ignored if
         for_clf == False.
@@ -16,7 +16,7 @@ class Baseline_transformer(nn.Module):
       emb_out: (nn.Linear) Projection matrix for the output.
       emb_pos: (model.utils.Positional_embeddings) Sinusoidal Position Embeddings.
       mha_blocks: (nn.ModuleList of nn.TransformerEncoderLayer) MHA blocks.
-      loss_fn: (func) Loss Fucntion.
+      loss_fn: (func) Loss Function.
     """
 
     def __init__(self, **kwargs):
@@ -78,7 +78,7 @@ class Baseline_transformer(nn.Module):
         """Implements forward pass.
 
         Args:
-          input_idxs: torch.Tensor of long [batch_size, seq_len]. Indices of tokens.
+          input_ids: torch.Tensor of long [batch_size, seq_len]. Indices of tokens.
           labels: Labels for classification or bert pre-training.
           attention_mask: torch.Tensor of long [batch_size, seq_len]. Has 0 for elemsnts
             that will be masked and 1 for those that will remain unchanges. If None is
