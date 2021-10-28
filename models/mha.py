@@ -139,6 +139,10 @@ class MHA(nn.Module):
             attention mask must be already applied to k.
           weights: None. Unused.
 
+        Retruns:
+          output: (torch.Tensor of float32)[batch_size, seq_len, n_heads, d_head] The result of
+            linear self attention.
+
         """
         # q, k, v -> [batch_size, seq_len, n_heads, d_head]
         kv = torch.einsum('bsnx,bsnz->bnxz', k, v)
@@ -164,6 +168,10 @@ class MHA(nn.Module):
           weights: (tuple of (torch.Tensor of float32)[batch_size, seq_len, n_heads, d_head])
             weights = (cos, sin), where cos[i, j] = cos(pi * i / 2 / M[i]) whre M[i] is the length
             of the i-th sample in the batch. Similarly for sin.
+
+        Retruns:
+          output: (torch.Tensor of float32)[batch_size, seq_len, n_heads, d_head] The result of
+            linear self attention.
         """
         # q, k, v -> [batch_size, seq_len, n_heads, d_head]
         cos, sin = weights
@@ -209,6 +217,9 @@ class MHA(nn.Module):
             weights = (cos, sin), where cos[i, j] = cos(pi * i / 2 / M[i]) whre M[i] 
             is the length of the i-th sample in the batch. Similarly for sin. If cos
             reweighting is not applied, weights = None. 
+
+        Retruns:
+          x: (torch.Tensor of float32)[batch_size, seq_len, d_head]
         """
         # x -> [batch_size, seq_len, d_model]
         # mask -> [batch_size, seq_len, 1] or None
