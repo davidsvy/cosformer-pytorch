@@ -226,6 +226,14 @@ class MHA(nn.Module):
         q, k, v = torch.chunk(self.w_qkv(x), 3, -1)
         # q, k, v -> [batch_size, seq_len, d_model]
 
+        # A note about padding & masking in kernel attention:
+        # In the f(Q) * (f(K^T) * V) attention, f(Q) is mutiplied by a dxd matrix.
+        # Therefore padded elements must be removed from (f(K^T) * V).
+        # This can be done by replacing padded elements (in the seq_len) dimension
+        # of either f(K^T) or V). However, as seen in linear_attention, K is
+        # summed in the seq_len dimension in the denominator, which means that
+        # K must be masked.
+
         q = self.split_heads(self.kernel(q))
         k = self.split_heads(self.apply_mask(self.kernel(k), mask))
         v = self.split_heads(v)
