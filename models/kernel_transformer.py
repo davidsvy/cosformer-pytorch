@@ -16,24 +16,17 @@ class Kernel_transformer(nn.Module):
     (https://arxiv.org/pdf/2006.16236.pdf).
 
     Attributes:
-      for_clf: (bool) If True, the model is used for classification. Otherwise, it
-        is used for BERT pretraining.
       use_cos: (bool) If True, the cos reweighting mechanism from 
         https://openreview.net/pdf?id=Bl8CQrx2Up4 is implemented and positional
         embeddings are not used. If False, sinusoidal positional embeddings are used.
-      n_classes: (int) Number of classes of the classification problem. Ignored if
-        for_clf == False.
       emb_in: (nn.Embedding) Input Embeddings.
-      emb_out: (nn.Linear) Projection matrix for the output.
       emb_pos: (model.utils.Positional_embeddings) Sinusoidal Position Embeddings.
       mha_blocks: (nn.ModuleList of nn.TransformerEncoderLayer) MHA blocks.
-      loss_fn: (func) Loss Function.
     """
 
-    def __init__(self, use_cos, kernel, for_clf, d_model, n_heads, n_layers,
-                 n_emb, n_classes=None, ffn_ratio=4, tie_emb=True, rezero=True,
-                 ln_eps=1e-5, denom_eps=1e-5, bias=False, dropout=0.2, max_len=1024,
-                 xavier=True):
+    def __init__(self, use_cos, kernel, d_model, n_heads, n_layers,
+                 n_emb, ffn_ratio=4, rezero=True, ln_eps=1e-5, denom_eps=1e-5,
+                 bias=False, dropout=0.2, max_len=1024, xavier=True):
         """Initializes a Kernel_transformer Module.
 
         Args:
@@ -42,17 +35,12 @@ class Kernel_transformer(nn.Module):
             embeddings are not used. If False, sinusoidal positional embeddings are used.
           kernel: (str) If 'relu' is given, softmax is approximated with F.relu(). If 'elu'
             is given, F.elu() + 1 is used.
-          for_clf: (bool) If True, the model is used for classification. Otherwise, it
-            is used for BERT pretraining.
           d_model: (int) The full dimension of the hidden activations.
           n_heads: (int) Number of attention heads calculated in parallel.
           n_layers: (int) Number of Transformer Encoder Layers.
           n_emb: (int) Number of embedding tokens.
-          n_classes: (int) Number of classes of the classification problem. Ignored if
-            for_clf == False.
           ffn_ratio: (int) The dimension of the hidden activations in FFN is ffn_ratio * d_model.
             ln_eps: Not used.
-          tie_emb: (bool) Whether to tie input and output embeddings. Ignored if for_clf == True.
           rezero: (bool) If True, the model utilizes the ReZero architecture from 
             https://arxiv.org/pdf/2003.04887.pdf . If False, the Pre-LN architecture from 
             https://arxiv.org/pdf/2002.04745.pdf is used.
@@ -66,22 +54,8 @@ class Kernel_transformer(nn.Module):
           xavier: (bool) Whether to initialize all Linear layers with init.xavier_uniform_.
         """
         super(Kernel_transformer, self).__init__()
-        self.for_clf = for_clf
         self.use_cos = use_cos
-        self.n_classes = n_classes
-
         self.emb_in = nn.Embedding(n_emb, d_model)
-        if self.for_clf:
-            if self.n_classes == 2:
-                self.n_classes = 1
-            self.emb_out = nn.Linear(d_model, self.n_classes)
-        else:
-            self.emb_out = nn.Linear(d_model, n_emb)
-
-        # Tie input & output embeddings as in https://arxiv.org/abs/1608.05859
-        if not self.for_clf and tie_emb:
-            self.emb_out.weight = self.emb_in.weight
-
         self.emb_pos = Positional_embeddings(d_model, max_len)
 
         Block_class = MHA_block_rezero if rezero else MHA_block
@@ -99,11 +73,6 @@ class Kernel_transformer(nn.Module):
                 bias=bias
             )
             self.mha_blocks.append(block)
-
-        if self.for_clf and self.n_classes == 1:
-            self.loss_fn = F.binary_cross_entropy_with_logits
-        else:
-            self.loss_fn = F.cross_entropy
 
         if xavier:
             self.init_xavier_uniform()
@@ -169,7 +138,7 @@ class Kernel_transformer(nn.Module):
 
         return cos, sin
 
-    def forward(self, input_ids, labels, attention_mask=None, lengths=None):
+    def forward(self, input_ids, attention_mask=None, lengths=None):
         """Implements forward pass.
 
         Although some arguments are optional, for correct behavior, all args must
@@ -217,11 +186,4 @@ class Kernel_transformer(nn.Module):
         for block in self.mha_blocks:
             x = block(x, attention_mask, cos_weights)
 
-        if self.for_clf:
-            x = x[:, 0, :]
-        x = self.emb_out(x)
-        if self.n_classes == 1:
-            x = x.squeeze(-1)
-        loss = self.loss_fn(x, labels)
-
-        return loss, x
+        return x

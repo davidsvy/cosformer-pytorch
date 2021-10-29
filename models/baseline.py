@@ -8,15 +8,9 @@ class Baseline_transformer(nn.Module):
     """A makeshift O(n^2 * d) BERT-style transformer used as a baseline. 
 
     Attributes
-      for_clf: (bool) If True, the model is used for classification. Otherwise, it
-        is used for BERT pretraining.
-      n_classes: (int) Number of classes of the classification problem. Ignored if
-        for_clf == False.
       emb_in: (nn.Embedding) Input Embeddings.
-      emb_out: (nn.Linear) Projection matrix for the output.
       emb_pos: (model.utils.Positional_embeddings) Sinusoidal Position Embeddings.
       mha_blocks: (nn.ModuleList of nn.TransformerEncoderLayer) MHA blocks.
-      loss_fn: (func) Loss Function.
     """
 
     def __init__(self, **kwargs):
@@ -26,21 +20,7 @@ class Baseline_transformer(nn.Module):
           **kwargs: (dict)
         """
         super(Baseline_transformer, self).__init__()
-        self.for_clf = kwargs['for_clf']
-        self.n_classes = kwargs['n_classes']
-
         self.emb_in = nn.Embedding(kwargs['n_emb'], kwargs['d_model'])
-        if self.for_clf:
-            if self.n_classes == 2:
-                self.n_classes = 1
-            self.emb_out = nn.Linear(kwargs['d_model'], self.n_classes)
-        else:
-            self.emb_out = nn.Linear(kwargs['d_model'], kwargs['n_emb'])
-
-        # Tie input & output embeddings as in https://arxiv.org/abs/1608.05859
-        if not self.for_clf and kwargs['tie_emb']:
-            self.emb_out.weight = self.emb_in.weight
-
         self.emb_pos = Positional_embeddings(
             kwargs['d_model'], kwargs['max_len'])
 
@@ -57,11 +37,6 @@ class Baseline_transformer(nn.Module):
             )
             self.mha_blocks.append(block)
 
-        if self.for_clf and self.n_classes == 1:
-            self.loss_fn = F.binary_cross_entropy_with_logits
-        else:
-            self.loss_fn = F.cross_entropy
-
         if kwargs['xavier']:
             self.init_xavier_uniform()
 
@@ -74,7 +49,7 @@ class Baseline_transformer(nn.Module):
                 if m.bias is not None:
                     torch.nn.init.zeros_(m.bias)
 
-    def forward(self, input_ids, labels, attention_mask=None, lengths=None):
+    def forward(self, input_ids, attention_mask=None, lengths=None):
         """Implements forward pass.
 
         Args:
@@ -110,11 +85,4 @@ class Baseline_transformer(nn.Module):
         for block in self.mha_blocks:
             x = block(x, src_key_padding_mask=attention_mask)
 
-        if self.for_clf:
-            x = x[:, 0, :]
-        x = self.emb_out(x)
-        if self.n_classes == 1:
-            x = x.squeeze(-1)
-        loss = self.loss_fn(x, labels)
-
-        return loss, x
+        return x
