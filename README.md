@@ -44,7 +44,7 @@ As many others, this paper buids on recent work on linear attention that is calc
 
 where <img src="https://render.githubusercontent.com/render/math?math=Q_i^{\cos} = \phi(Q_i)\cos\left(\frac{\pi i}{2M}\right), Q_i^{\sin} = \phi(Q_i)\sin\left(\frac{\pi i}{2M}\right)"> etc.
 
-As the author of this repo possesses neither the time nor the ability, only the non-causal version of this approach is emplemented.
+As the author of this repo possesses neither the time nor the ability, only the non-causal version of this approach is implemented.
 
 
 
